@@ -35,6 +35,7 @@ import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.pow
 import kotlin.math.roundToInt
 
 object ImageUtil {
@@ -45,6 +46,11 @@ object ImageUtil {
     private const val CROP_PADDING_FRACTION = 0.01f
     private const val MAX_CROP_FRACTION = 0.15f
     private const val MIN_CROP_GAIN_KEEP = 0.98
+
+    private const val EINK_BLACK_POINT = 12
+    private const val EINK_WHITE_POINT = 243
+    private const val EINK_GAMMA = 1.15f
+    private const val SHARPEN_AMOUNT = 0.6f
 
     /**
      * Scales an image down to fit the given box (never up) and re-encodes it as lossy WebP.
@@ -59,6 +65,8 @@ object ImageUtil {
         quality: Int,
         grayscale: Boolean = false,
         cropMargins: Boolean = false,
+        enhance: Boolean = false,
+        smoothScale: Boolean = false,
     ): ByteArray? {
         if (isAnimatedAndSupported(imageSource)) return null
 
@@ -69,18 +77,23 @@ object ImageUtil {
         if (max(width, height) > WEBP_MAX_DIMENSION) return null
 
         val options = BitmapFactory.Options().apply {
-            inSampleSize = sampleSizeFor(bounds.outWidth, bounds.outHeight, width, height)
+            // Smooth scaling needs 2x headroom so the decoder's coarse subsampling is only a first step
+            val headroom = if (smoothScale) 2 else 1
+            inSampleSize = sampleSizeFor(bounds.outWidth, bounds.outHeight, width * headroom, height * headroom)
         }
         val decoded = BitmapFactory.decodeStream(imageSource.peek().inputStream(), null, options) ?: return null
         val cropped = if (cropMargins) decoded.cropMargins() else decoded
         val (targetWidth, targetHeight) = fitWithin(cropped.width, cropped.height, maxWidth, maxHeight)
         val scaled = if (cropped.width == targetWidth && cropped.height == targetHeight) {
             cropped
+        } else if (smoothScale) {
+            cropped.scaleSmooth(targetWidth, targetHeight)
         } else {
             cropped.scale(targetWidth, targetHeight)
         }
         if (scaled !== cropped) cropped.recycle()
-        val result = if (grayscale) scaled.toGrayscale().also { scaled.recycle() } else scaled
+        val gray = if (grayscale) scaled.toGrayscale().also { scaled.recycle() } else scaled
+        val result = if (enhance) gray.enhance().also { gray.recycle() } else gray
 
         val format = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             Bitmap.CompressFormat.WEBP_LOSSY
@@ -143,6 +156,63 @@ object ImageUtil {
         val crop = cropBounds(width, height, content) ?: return this
         return Bitmap.createBitmap(this, crop.left, crop.top, crop.right - crop.left, crop.bottom - crop.top)
             .also { recycle() }
+    }
+
+    /** Contrast curve for e-ink: clips near-black and near-white, then darkens the midtones slightly. */
+    internal fun contrastLut(): IntArray = IntArray(256) { v ->
+        val level = ((v - EINK_BLACK_POINT).toFloat() / (EINK_WHITE_POINT - EINK_BLACK_POINT)).coerceIn(0f, 1f)
+        (level.pow(EINK_GAMMA) * 255f).roundToInt()
+    }
+
+    /** Applies [contrastLut] then a 4-neighbour unsharp mask; the one-pixel border is only toned. */
+    internal fun enhancePixels(pixels: IntArray, width: Int, height: Int): IntArray {
+        val lut = contrastLut()
+        val toned = IntArray(pixels.size) { i ->
+            val p = pixels[i]
+            (p and 0xFF000000.toInt()) or (lut[p.red] shl 16) or (lut[p.green] shl 8) or lut[p.blue]
+        }
+        val out = toned.copyOf()
+        for (y in 1 until height - 1) {
+            for (x in 1 until width - 1) {
+                val i = y * width + x
+                var sharpened = toned[i] and 0xFF000000.toInt()
+                for (shift in intArrayOf(16, 8, 0)) {
+                    val center = (toned[i] shr shift) and 0xFF
+                    val neighbours = (
+                        ((toned[i - 1] shr shift) and 0xFF) + ((toned[i + 1] shr shift) and 0xFF) +
+                            ((toned[i - width] shr shift) and 0xFF) + ((toned[i + width] shr shift) and 0xFF)
+                        ) / 4f
+                    val value = (center + SHARPEN_AMOUNT * (center - neighbours)).roundToInt().coerceIn(0, 255)
+                    sharpened = sharpened or (value shl shift)
+                }
+                out[i] = sharpened
+            }
+        }
+        return out
+    }
+
+    private fun Bitmap.enhance(): Bitmap {
+        val pixels = IntArray(width * height).also { getPixels(it, 0, width, 0, 0, width, height) }
+        return createBitmap(width, height).also {
+            it.setPixels(enhancePixels(pixels, width, height), 0, width, 0, 0, width, height)
+        }
+    }
+
+    /** Halves with filtering while at least 2x too big, which averages pixels instead of skipping them. */
+    private fun Bitmap.scaleSmooth(targetWidth: Int, targetHeight: Int): Bitmap {
+        var current = this
+        while (current.width / 2 >= targetWidth && current.height / 2 >= targetHeight) {
+            val half = current.scale(current.width / 2, current.height / 2)
+            if (current !== this) current.recycle()
+            current = half
+        }
+        val result = if (current.width == targetWidth && current.height == targetHeight) {
+            current
+        } else {
+            current.scale(targetWidth, targetHeight)
+        }
+        if (current !== this && current !== result) current.recycle()
+        return result
     }
 
     private fun Bitmap.toGrayscale(): Bitmap {
