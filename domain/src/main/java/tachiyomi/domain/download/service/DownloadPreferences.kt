@@ -19,6 +19,10 @@ class DownloadPreferences(
 
     val saveChaptersAsCBZ: Preference<Boolean> = preferenceStore.getBoolean("save_chapter_as_cbz", true)
 
+    val reencodeDownloads: Preference<Boolean> = preferenceStore.getBoolean("reencode_downloads", false)
+
+    val reencodeQuality: Preference<Int> = preferenceStore.getInt("reencode_quality", 75)
+
     val autoDownloadWhileReading: Preference<Int> = preferenceStore.getInt("auto_download_while_reading", 0)
 
     val removeAfterReadSlots: Preference<Int> = preferenceStore.getInt("remove_after_read_slots", -1)
