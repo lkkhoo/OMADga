@@ -7,7 +7,10 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.BitmapRegionDecoder
 import android.graphics.Color
+import android.graphics.ColorMatrix
+import android.graphics.ColorMatrixColorFilter
 import android.graphics.Matrix
+import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
@@ -44,7 +47,13 @@ object ImageUtil {
      * @return the encoded bytes, or null when the original should be kept: animated, undecodable, or a
      * strip taller than twice the box, which fitting would shrink to an unreadable width.
      */
-    fun reencodeToWebp(imageSource: BufferedSource, maxWidth: Int, maxHeight: Int, quality: Int): ByteArray? {
+    fun reencodeToWebp(
+        imageSource: BufferedSource,
+        maxWidth: Int,
+        maxHeight: Int,
+        quality: Int,
+        grayscale: Boolean = false,
+    ): ByteArray? {
         if (isAnimatedAndSupported(imageSource)) return null
 
         val bounds = extractImageOptions(imageSource)
@@ -59,6 +68,7 @@ object ImageUtil {
         val decoded = BitmapFactory.decodeStream(imageSource.peek().inputStream(), null, options) ?: return null
         val scaled = if (decoded.width == width && decoded.height == height) decoded else decoded.scale(width, height)
         if (scaled !== decoded) decoded.recycle()
+        val result = if (grayscale) scaled.toGrayscale().also { scaled.recycle() } else scaled
 
         val format = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             Bitmap.CompressFormat.WEBP_LOSSY
@@ -67,9 +77,16 @@ object ImageUtil {
             Bitmap.CompressFormat.WEBP
         }
         val output = Buffer()
-        scaled.compress(format, quality, output.outputStream())
-        scaled.recycle()
+        result.compress(format, quality, output.outputStream())
+        result.recycle()
         return output.readByteArray()
+    }
+
+    private fun Bitmap.toGrayscale(): Bitmap {
+        val paint = Paint().apply {
+            colorFilter = ColorMatrixColorFilter(ColorMatrix().apply { setSaturation(0f) })
+        }
+        return createBitmap(width, height).applyCanvas { drawBitmap(this@toGrayscale, 0f, 0f, paint) }
     }
 
     internal fun fitWithin(width: Int, height: Int, maxWidth: Int, maxHeight: Int): Pair<Int, Int> {
