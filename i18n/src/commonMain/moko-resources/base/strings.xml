@@ -590,6 +590,10 @@
     <string name="pref_download_reencode_grayscale_summary">Always on for the Boox Page profile.</string>
     <string name="pref_download_reencode_crop">Crop white margins</string>
     <string name="pref_download_reencode_crop_summary">Trims blank borders, up to 15% per side. Pages can end up with slightly different sizes.</string>
+    <string name="pref_download_reencode_enhance">Sharpen and boost contrast</string>
+    <string name="pref_download_reencode_enhance_summary">Tunes pages for e-ink after scaling. Fixed strength.</string>
+    <string name="pref_download_reencode_smooth">Smooth downscaling</string>
+    <string name="pref_download_reencode_smooth_summary">Averages pixels when shrinking to reduce moiré in screentones. Slower and uses more memory.</string>
     <string name="device_profile_musnap_ocean_c">Musnap Ocean C (1264×1680)</string>
     <string name="device_profile_boox_page">Boox Page (1264×1680)</string>
     <string name="pref_download_concurrent_sources">Concurrent source downloads</string>
