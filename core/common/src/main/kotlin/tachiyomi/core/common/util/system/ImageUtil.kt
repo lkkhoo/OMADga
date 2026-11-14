@@ -21,6 +21,7 @@ import androidx.core.graphics.drawable.toDrawable
 import androidx.core.graphics.get
 import androidx.core.graphics.green
 import androidx.core.graphics.red
+import androidx.core.graphics.scale
 import ca.mpreg.imagedecoder.ImageDecoder
 import com.hippo.unifile.UniFile
 import logcat.LogPriority
@@ -31,8 +32,59 @@ import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
 
 object ImageUtil {
+
+    private const val WEBP_MAX_DIMENSION = 16383
+
+    /**
+     * Scales an image down to fit the given box (never up) and re-encodes it as lossy WebP.
+     *
+     * @return the encoded bytes, or null when the original should be kept: animated, undecodable, or a
+     * strip taller than twice the box, which fitting would shrink to an unreadable width.
+     */
+    fun reencodeToWebp(imageSource: BufferedSource, maxWidth: Int, maxHeight: Int, quality: Int): ByteArray? {
+        if (isAnimatedAndSupported(imageSource)) return null
+
+        val bounds = extractImageOptions(imageSource)
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0 || bounds.outHeight > maxHeight * 2) return null
+
+        val (width, height) = fitWithin(bounds.outWidth, bounds.outHeight, maxWidth, maxHeight)
+        if (max(width, height) > WEBP_MAX_DIMENSION) return null
+
+        val options = BitmapFactory.Options().apply {
+            inSampleSize = sampleSizeFor(bounds.outWidth, bounds.outHeight, width, height)
+        }
+        val decoded = BitmapFactory.decodeStream(imageSource.peek().inputStream(), null, options) ?: return null
+        val scaled = if (decoded.width == width && decoded.height == height) decoded else decoded.scale(width, height)
+        if (scaled !== decoded) decoded.recycle()
+
+        val format = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            Bitmap.CompressFormat.WEBP_LOSSY
+        } else {
+            @Suppress("DEPRECATION")
+            Bitmap.CompressFormat.WEBP
+        }
+        val output = Buffer()
+        scaled.compress(format, quality, output.outputStream())
+        scaled.recycle()
+        return output.readByteArray()
+    }
+
+    internal fun fitWithin(width: Int, height: Int, maxWidth: Int, maxHeight: Int): Pair<Int, Int> {
+        val scale = min(1f, min(maxWidth / width.toFloat(), maxHeight / height.toFloat()))
+        return max(1, (width * scale).roundToInt()) to max(1, (height * scale).roundToInt())
+    }
+
+    /** Largest power-of-two subsampling that still decodes at least the target size. */
+    internal fun sampleSizeFor(width: Int, height: Int, targetWidth: Int, targetHeight: Int): Int {
+        var sampleSize = 1
+        while (width / (sampleSize * 2) >= targetWidth && height / (sampleSize * 2) >= targetHeight) {
+            sampleSize *= 2
+        }
+        return sampleSize
+    }
 
     fun isImage(name: String?, openStream: (() -> InputStream)? = null): Boolean {
         if (name == null) return false
