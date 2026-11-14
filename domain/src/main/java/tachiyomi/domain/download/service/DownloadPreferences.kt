@@ -5,6 +5,7 @@ import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import tachiyomi.core.common.preference.Preference
 import tachiyomi.core.common.preference.PreferenceStore
+import tachiyomi.core.common.preference.getEnum
 
 @Inject
 @SingleIn(AppScope::class)
@@ -22,6 +23,11 @@ class DownloadPreferences(
     val reencodeDownloads: Preference<Boolean> = preferenceStore.getBoolean("reencode_downloads", false)
 
     val reencodeQuality: Preference<Int> = preferenceStore.getInt("reencode_quality", 75)
+
+    val reencodeProfile: Preference<DeviceProfile> = preferenceStore.getEnum(
+        "reencode_profile",
+        DeviceProfile.MUSNAP_OCEAN_C,
+    )
 
     val autoDownloadWhileReading: Preference<Int> = preferenceStore.getInt("auto_download_while_reading", 0)
 

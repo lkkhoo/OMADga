@@ -643,11 +643,12 @@ class Downloader(
      * wouldn't make it smaller.
      */
     private fun reencodeImage(file: UniFile, tmpDir: UniFile, filename: String): UniFile {
+        val profile = downloadPreferences.reencodeProfile.get()
         val bytes = file.openInputStream().use {
             ImageUtil.reencodeToWebp(
                 it.source().buffer(),
-                REENCODE_MAX_WIDTH,
-                REENCODE_MAX_HEIGHT,
+                profile.width,
+                profile.height,
                 downloadPreferences.reencodeQuality.get(),
             )
         }
@@ -877,10 +878,6 @@ class Downloader(
         const val WARNING_NOTIF_TIMEOUT_MS = 30_000L
         const val CHAPTERS_PER_SOURCE_QUEUE_WARNING_THRESHOLD = 15
         private const val DOWNLOADS_QUEUED_WARNING_THRESHOLD = 30
-
-        // Kaleido 3 7" panel (Musnap Ocean C)
-        private const val REENCODE_MAX_WIDTH = 1264
-        private const val REENCODE_MAX_HEIGHT = 1680
     }
 }
 
