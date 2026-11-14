@@ -8,15 +8,20 @@ stays cheap. Feature work goes on `feature/*` branches, not `main`.
 
 ## Status (update as work lands)
 
-- On `feature/download-reencode`: application ID is `app.omadga`; `ImageUtil.reencodeToWebp` with tests; the
-  `reencodeDownloads` (off by default) and `reencodeQuality` (75) preferences; a re-encode hook in
-  `Downloader.getOrDownloadImage` (WebP scaled to fit 1264x1680); and a Downloads settings switch plus quality
-  slider. All verified with `check`, none on a device.
-- Not done yet: grayscale, margin crop, spread split, webtoon strip chunking, device profiles (Phase 1 below).
-  Strips taller than 2x the box are currently left unprocessed.
+- On `feature/download-reencode`: application ID `app.omadga`, app name OMADga; `ImageUtil.reencodeToWebp` and a
+  hook in `Downloader.getOrDownloadImage`. Settings under Downloads, shown when "Shrink downloaded pages" is on:
+  quality (50..100, default 75), target device (Musnap Ocean C, Boox Page, both 1264x1680; Boox Page forces
+  grayscale), grayscale, crop white margins, sharpen and boost contrast, smooth downscaling (all off by default).
+  Also a "download all chapters" action in the shared download menu. Verified with `check`; image behaviour is
+  only unit-tested for the pure helpers.
+- Measured on a Boox Page with Ao Ashi (411 chapters, grayscale PNG source from Komikku, 2.47 GB): q75 gave
+  about 74% of the source, q50 with all switches gave 60%. Quality is the main lever; grayscale and crop saved
+  about nothing there. Not yet tried on a device: sharpen, contrast, smooth downscaling.
+- Not done yet: spread split, webtoon strip chunking (strips taller than 2x the box are left unprocessed), a tool
+  to re-encode existing downloads. The renamed app only changed `app_name`; see Fork rules.
 - Toolchain verified: JDK 21, SDK, NDK 29, `assembleDebug` and `check` all build.
-- No target device bought yet (Musnap Ocean C vs Boox Go Color 7 undecided), so there is no on-device testing.
-  Build and review with `check`; flag anything that needs hardware as untested.
+- Devices: a Boox Page is available for testing over adb (internal storage 23 GB, plus a microSD). The Musnap
+  Ocean C is not bought yet. Flag anything that needs hardware as untested.
 - The design notes below come from a read of the source, not from running it. Re-read `Downloader.kt` and
   `ImageUtil.kt` before coding, since upstream may have moved.
 
@@ -42,7 +47,10 @@ stays cheap. Feature work goes on `feature/*` branches, not `main`.
 - Change the application ID (currently `app.mihon`) so OMADga installs alongside stock Mihon. That touches
   `app/build.gradle.kts`; AGENTS.md's "don't touch `gradle/`" does not cover it.
 - Keep the extension API untouched so existing Mihon extensions keep working.
-- Don't rebrand or restyle beyond what the e-ink work needs.
+- Rebranding stops at the user-visible app name (`app_name`). Kotlin packages (`mihon.*`), Gradle plugin ids, the
+  `mihon://` deep-link scheme (tracker logins), tracker User-Agents, licence notices and the support/donation
+  texts stay as upstream so rebasing stays cheap and nothing claims to be OMADga's donation campaign.
+- Don't restyle beyond what the e-ink work needs.
 
 ## Design notes (from reading the source, not yet implemented)
 
