@@ -34,6 +34,7 @@ object SettingsDownloadScreen : SearchableSettings {
         val allCategories by getCategories.subscribe().collectAsState(initial = emptyList())
 
         val downloadPreferences = remember { context.appGraph.downloadPreferences }
+        val reencodeDownloads by downloadPreferences.reencodeDownloads.collectAsState()
         return listOf(
             Preference.PreferenceItem.SwitchPreference(
                 preference = downloadPreferences.downloadOnlyOverWifi,
@@ -42,6 +43,17 @@ object SettingsDownloadScreen : SearchableSettings {
             Preference.PreferenceItem.SwitchPreference(
                 preference = downloadPreferences.saveChaptersAsCBZ,
                 title = stringResource(MR.strings.save_chapter_as_cbz),
+            ),
+            Preference.PreferenceItem.SwitchPreference(
+                preference = downloadPreferences.reencodeDownloads,
+                title = stringResource(MR.strings.pref_download_reencode),
+                subtitle = stringResource(MR.strings.pref_download_reencode_summary),
+            ),
+            Preference.PreferenceItem.SliderPreference(
+                preference = downloadPreferences.reencodeQuality,
+                valueRange = 50..100 step 5,
+                title = stringResource(MR.strings.pref_download_reencode_quality),
+                visible = reencodeDownloads,
             ),
             Preference.PreferenceItem.SliderPreference(
                 preference = downloadPreferences.parallelSourceLimit,

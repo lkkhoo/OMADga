@@ -582,6 +582,9 @@
     <string name="auto_download_while_reading">Auto download while reading</string>
     <string name="download_ahead_info">Only works if the current chapter + the next one are already downloaded.</string>
     <string name="save_chapter_as_cbz">Save as CBZ archive</string>
+    <string name="pref_download_reencode">Shrink downloaded pages</string>
+    <string name="pref_download_reencode_summary">Scale pages to the e-reader screen and re-encode as WebP. Only applies to new downloads.</string>
+    <string name="pref_download_reencode_quality">WebP quality</string>
     <string name="pref_download_concurrent_sources">Concurrent source downloads</string>
     <string name="pref_download_concurrent_pages">Concurrent page downloads</string>
     <string name="pref_download_concurrent_pages_summary">Pages downloaded simultaneously per source</string>
