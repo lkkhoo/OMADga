@@ -65,6 +65,12 @@ object SettingsDownloadScreen : SearchableSettings {
                 title = stringResource(MR.strings.pref_download_reencode_profile),
                 visible = reencodeDownloads,
             ),
+            Preference.PreferenceItem.SwitchPreference(
+                preference = downloadPreferences.reencodeGrayscale,
+                title = stringResource(MR.strings.pref_download_reencode_grayscale),
+                subtitle = stringResource(MR.strings.pref_download_reencode_grayscale_summary),
+                visible = reencodeDownloads,
+            ),
             Preference.PreferenceItem.SliderPreference(
                 preference = downloadPreferences.parallelSourceLimit,
                 valueRange = 1..10,

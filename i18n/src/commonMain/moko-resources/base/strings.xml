@@ -586,6 +586,8 @@
     <string name="pref_download_reencode_summary">Scale pages to the e-reader screen and re-encode as WebP. Only applies to new downloads.</string>
     <string name="pref_download_reencode_quality">WebP quality</string>
     <string name="pref_download_reencode_profile">Target device</string>
+    <string name="pref_download_reencode_grayscale">Grayscale pages</string>
+    <string name="pref_download_reencode_grayscale_summary">Always on for the Boox Page profile.</string>
     <string name="device_profile_musnap_ocean_c">Musnap Ocean C (1264×1680)</string>
     <string name="device_profile_boox_page">Boox Page (1264×1680)</string>
     <string name="pref_download_concurrent_sources">Concurrent source downloads</string>
