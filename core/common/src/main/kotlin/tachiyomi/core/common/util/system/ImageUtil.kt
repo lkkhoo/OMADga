@@ -41,6 +41,11 @@ object ImageUtil {
 
     private const val WEBP_MAX_DIMENSION = 16383
 
+    private const val BLANK_THRESHOLD = 240
+    private const val CROP_PADDING_FRACTION = 0.01f
+    private const val MAX_CROP_FRACTION = 0.15f
+    private const val MIN_CROP_GAIN_KEEP = 0.98
+
     /**
      * Scales an image down to fit the given box (never up) and re-encodes it as lossy WebP.
      *
@@ -53,6 +58,7 @@ object ImageUtil {
         maxHeight: Int,
         quality: Int,
         grayscale: Boolean = false,
+        cropMargins: Boolean = false,
     ): ByteArray? {
         if (isAnimatedAndSupported(imageSource)) return null
 
@@ -66,8 +72,14 @@ object ImageUtil {
             inSampleSize = sampleSizeFor(bounds.outWidth, bounds.outHeight, width, height)
         }
         val decoded = BitmapFactory.decodeStream(imageSource.peek().inputStream(), null, options) ?: return null
-        val scaled = if (decoded.width == width && decoded.height == height) decoded else decoded.scale(width, height)
-        if (scaled !== decoded) decoded.recycle()
+        val cropped = if (cropMargins) decoded.cropMargins() else decoded
+        val (targetWidth, targetHeight) = fitWithin(cropped.width, cropped.height, maxWidth, maxHeight)
+        val scaled = if (cropped.width == targetWidth && cropped.height == targetHeight) {
+            cropped
+        } else {
+            cropped.scale(targetWidth, targetHeight)
+        }
+        if (scaled !== cropped) cropped.recycle()
         val result = if (grayscale) scaled.toGrayscale().also { scaled.recycle() } else scaled
 
         val format = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -80,6 +92,57 @@ object ImageUtil {
         result.compress(format, quality, output.outputStream())
         result.recycle()
         return output.readByteArray()
+    }
+
+    internal data class Bounds(val left: Int, val top: Int, val right: Int, val bottom: Int)
+
+    /** Bounding box of everything that isn't near-white or transparent, or null for a blank image. */
+    internal fun findContentBounds(width: Int, height: Int, readRow: (y: Int, row: IntArray) -> Unit): Bounds? {
+        val row = IntArray(width)
+        var left = width
+        var right = -1
+        var top = -1
+        var bottom = -1
+        for (y in 0 until height) {
+            readRow(y, row)
+            val first = row.indexOfFirst { !it.isBackground() }
+            if (first < 0) continue
+            if (top < 0) top = y
+            bottom = y
+            left = min(left, first)
+            right = max(right, row.indexOfLast { !it.isBackground() })
+        }
+        return if (top < 0) null else Bounds(left, top, right + 1, bottom + 1)
+    }
+
+    /**
+     * Turns [content] into the crop rectangle: a small margin is kept, no side loses more than
+     * [MAX_CROP_FRACTION], and null means the crop would save too little to be worth it.
+     */
+    internal fun cropBounds(width: Int, height: Int, content: Bounds?): Bounds? {
+        if (content == null) return null
+        val pad = max(2, (min(width, height) * CROP_PADDING_FRACTION).roundToInt())
+        val maxX = (width * MAX_CROP_FRACTION).toInt()
+        val maxY = (height * MAX_CROP_FRACTION).toInt()
+        val crop = Bounds(
+            left = (content.left - pad).coerceIn(0, maxX),
+            top = (content.top - pad).coerceIn(0, maxY),
+            right = (content.right + pad).coerceIn(width - maxX, width),
+            bottom = (content.bottom + pad).coerceIn(height - maxY, height),
+        )
+        val area = (crop.right - crop.left).toLong() * (crop.bottom - crop.top)
+        return if (area > width.toLong() * height * MIN_CROP_GAIN_KEEP) null else crop
+    }
+
+    private fun Int.isBackground(): Boolean {
+        return alpha < 16 || (red >= BLANK_THRESHOLD && green >= BLANK_THRESHOLD && blue >= BLANK_THRESHOLD)
+    }
+
+    private fun Bitmap.cropMargins(): Bitmap {
+        val content = findContentBounds(width, height) { y, row -> getPixels(row, 0, width, 0, y, width, 1) }
+        val crop = cropBounds(width, height, content) ?: return this
+        return Bitmap.createBitmap(this, crop.left, crop.top, crop.right - crop.left, crop.bottom - crop.top)
+            .also { recycle() }
     }
 
     private fun Bitmap.toGrayscale(): Bitmap {
