@@ -15,6 +15,7 @@ import eu.kanade.presentation.more.settings.Preference
 import eu.kanade.presentation.more.settings.widget.TriStateListDialog
 import mihon.app.di.appGraph
 import tachiyomi.domain.category.model.Category
+import tachiyomi.domain.download.service.DeviceProfile
 import tachiyomi.domain.download.service.DownloadPreferences
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.i18n.pluralStringResource
@@ -53,6 +54,15 @@ object SettingsDownloadScreen : SearchableSettings {
                 preference = downloadPreferences.reencodeQuality,
                 valueRange = 50..100 step 5,
                 title = stringResource(MR.strings.pref_download_reencode_quality),
+                visible = reencodeDownloads,
+            ),
+            Preference.PreferenceItem.ListPreference(
+                preference = downloadPreferences.reencodeProfile,
+                entries = mapOf(
+                    DeviceProfile.MUSNAP_OCEAN_C to stringResource(MR.strings.device_profile_musnap_ocean_c),
+                    DeviceProfile.BOOX_PAGE to stringResource(MR.strings.device_profile_boox_page),
+                ),
+                title = stringResource(MR.strings.pref_download_reencode_profile),
                 visible = reencodeDownloads,
             ),
             Preference.PreferenceItem.SliderPreference(
