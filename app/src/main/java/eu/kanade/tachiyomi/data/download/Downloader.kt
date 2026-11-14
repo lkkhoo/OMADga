@@ -52,6 +52,8 @@ import mihon.core.metro.AppCoroutineScope
 import mihon.data.cache.ChapterCache
 import nl.adaptivity.xmlutil.serialization.XML
 import okhttp3.Response
+import okio.buffer
+import okio.source
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.util.system.ImageUtil
 import tachiyomi.core.common.util.system.logcat
@@ -543,8 +545,15 @@ class Downloader(
             // If the image is already downloaded, do nothing. Otherwise download from network
             val file = when {
                 imageFile != null -> imageFile
-                else -> copyImageFromCache(page.imageUrl!!, tmpDir, filename)
-                    ?: downloadImage(page, download.source, tmpDir, filename)
+                else -> {
+                    val fetched = copyImageFromCache(page.imageUrl!!, tmpDir, filename)
+                        ?: downloadImage(page, download.source, tmpDir, filename)
+                    if (downloadPreferences.reencodeDownloads.get()) {
+                        reencodeImage(fetched, tmpDir, filename)
+                    } else {
+                        fetched
+                    }
+                }
             }
 
             // When the page is ready, set page path, progress (just in case) and status
@@ -627,6 +636,28 @@ class Downloader(
         val extension = tmpFile.openInputStream().use { ImageUtil.findImageType(it) } ?: return tmpFile
         tmpFile.renameTo("$filename.${extension.extension}")
         return tmpFile
+    }
+
+    /**
+     * Replaces a freshly downloaded page with a screen-sized WebP, or returns it unchanged when that
+     * wouldn't make it smaller.
+     */
+    private fun reencodeImage(file: UniFile, tmpDir: UniFile, filename: String): UniFile {
+        val bytes = file.openInputStream().use {
+            ImageUtil.reencodeToWebp(
+                it.source().buffer(),
+                REENCODE_MAX_WIDTH,
+                REENCODE_MAX_HEIGHT,
+                downloadPreferences.reencodeQuality.get(),
+            )
+        }
+        if (bytes == null || bytes.size >= file.length()) return file
+
+        val webp = tmpDir.createFile("$filename.tmp")!!
+        webp.openOutputStream().use { it.write(bytes) }
+        webp.renameTo("$filename.webp")
+        file.delete()
+        return webp
     }
 
     /**
@@ -846,6 +877,10 @@ class Downloader(
         const val WARNING_NOTIF_TIMEOUT_MS = 30_000L
         const val CHAPTERS_PER_SOURCE_QUEUE_WARNING_THRESHOLD = 15
         private const val DOWNLOADS_QUEUED_WARNING_THRESHOLD = 30
+
+        // Kaleido 3 7" panel (Musnap Ocean C)
+        private const val REENCODE_MAX_WIDTH = 1264
+        private const val REENCODE_MAX_HEIGHT = 1680
     }
 }
 
