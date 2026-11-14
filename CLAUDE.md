@@ -8,9 +8,13 @@ stays cheap. Feature work goes on `feature/*` branches, not `main`.
 
 ## Status (update as work lands)
 
-- Fork created and cloned, `feature/download-reencode` branch checked out. No code changed yet.
-- Toolchain: JDK 21 installed. Android cmdline-tools, SDK licences, NDK 29 and a first `./gradlew assembleDebug`
-  are NOT yet done or verified.
+- On `feature/download-reencode`: application ID is `app.omadga`; `ImageUtil.reencodeToWebp` with tests; the
+  `reencodeDownloads` (off by default) and `reencodeQuality` (75) preferences; a re-encode hook in
+  `Downloader.getOrDownloadImage` (WebP scaled to fit 1264x1680); and a Downloads settings switch plus quality
+  slider. All verified with `check`, none on a device.
+- Not done yet: grayscale, margin crop, spread split, webtoon strip chunking, device profiles (Phase 1 below).
+  Strips taller than 2x the box are currently left unprocessed.
+- Toolchain verified: JDK 21, SDK, NDK 29, `assembleDebug` and `check` all build.
 - No target device bought yet (Musnap Ocean C vs Boox Go Color 7 undecided), so there is no on-device testing.
   Build and review with `check`; flag anything that needs hardware as untested.
 - The design notes below come from a read of the source, not from running it. Re-read `Downloader.kt` and
@@ -87,6 +91,6 @@ Open question: default device profile (Musnap resolution vs generic with custom 
 
 - JDK 21 (CI uses `.github/.java-version`), Java 17 target, Gradle 9.9.1 via the wrapper, compileSdk 37.2,
   targetSdk 36, minSdk 26, NDK 29.0.14206865.
-- Android SDK at `~/Android` (`ANDROID_HOME`), command-line tools only.
+- Android SDK via `ANDROID_HOME` (command-line tools only); `local.properties` holds `sdk.dir`.
 - `./gradlew assembleDebug` to build; `./gradlew check` before committing (see AGENTS.md).
 - `sudo` fails from the Bash tool on this machine; give the user the command to run instead.
