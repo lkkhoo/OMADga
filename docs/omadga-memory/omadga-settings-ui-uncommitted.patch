@@ -1,0 +1,44 @@
+diff --git a/app/src/main/java/eu/kanade/presentation/more/settings/screen/SettingsDownloadScreen.kt b/app/src/main/java/eu/kanade/presentation/more/settings/screen/SettingsDownloadScreen.kt
+index 17035b8db..f69834f8f 100644
+--- a/app/src/main/java/eu/kanade/presentation/more/settings/screen/SettingsDownloadScreen.kt
++++ b/app/src/main/java/eu/kanade/presentation/more/settings/screen/SettingsDownloadScreen.kt
+@@ -34,6 +34,7 @@ object SettingsDownloadScreen : SearchableSettings {
+         val allCategories by getCategories.subscribe().collectAsState(initial = emptyList())
+ 
+         val downloadPreferences = remember { context.appGraph.downloadPreferences }
++        val reencodeDownloads by downloadPreferences.reencodeDownloads.collectAsState()
+         return listOf(
+             Preference.PreferenceItem.SwitchPreference(
+                 preference = downloadPreferences.downloadOnlyOverWifi,
+@@ -43,6 +44,17 @@ object SettingsDownloadScreen : SearchableSettings {
+                 preference = downloadPreferences.saveChaptersAsCBZ,
+                 title = stringResource(MR.strings.save_chapter_as_cbz),
+             ),
++            Preference.PreferenceItem.SwitchPreference(
++                preference = downloadPreferences.reencodeDownloads,
++                title = stringResource(MR.strings.pref_download_reencode),
++                subtitle = stringResource(MR.strings.pref_download_reencode_summary),
++            ),
++            Preference.PreferenceItem.SliderPreference(
++                preference = downloadPreferences.reencodeQuality,
++                valueRange = 50..100 step 5,
++                title = stringResource(MR.strings.pref_download_reencode_quality),
++                visible = reencodeDownloads,
++            ),
+             Preference.PreferenceItem.SliderPreference(
+                 preference = downloadPreferences.parallelSourceLimit,
+                 valueRange = 1..10,
+diff --git a/i18n/src/commonMain/moko-resources/base/strings.xml b/i18n/src/commonMain/moko-resources/base/strings.xml
+index 187b916b0..d024af88e 100644
+--- a/i18n/src/commonMain/moko-resources/base/strings.xml
++++ b/i18n/src/commonMain/moko-resources/base/strings.xml
+@@ -582,6 +582,9 @@
+     <string name="auto_download_while_reading">Auto download while reading</string>
+     <string name="download_ahead_info">Only works if the current chapter + the next one are already downloaded.</string>
+     <string name="save_chapter_as_cbz">Save as CBZ archive</string>
++    <string name="pref_download_reencode">Shrink downloaded pages</string>
++    <string name="pref_download_reencode_summary">Scale pages to the e-reader screen and re-encode as WebP. Only applies to new downloads.</string>
++    <string name="pref_download_reencode_quality">WebP quality</string>
+     <string name="pref_download_concurrent_sources">Concurrent source downloads</string>
+     <string name="pref_download_concurrent_pages">Concurrent page downloads</string>
+     <string name="pref_download_concurrent_pages_summary">Pages downloaded simultaneously per source</string>

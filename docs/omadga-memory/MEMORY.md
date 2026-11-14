@@ -1,0 +1,2 @@
+- [OMADga status](project-omadga-status.md) — commits, unverified UI patch, toolchain, next steps (2026-11-14)
+- [Gradle build handling](feedback-gradle-builds.md) — nohup, one daemon, timings, pkill pitfall
