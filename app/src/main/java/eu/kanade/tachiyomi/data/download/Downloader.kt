@@ -651,6 +651,7 @@ class Downloader(
                 profile.height,
                 downloadPreferences.reencodeQuality.get(),
                 profile.grayscale || downloadPreferences.reencodeGrayscale.get(),
+                downloadPreferences.reencodeCropMargins.get(),
             )
         }
         if (bytes == null || bytes.size >= file.length()) return file

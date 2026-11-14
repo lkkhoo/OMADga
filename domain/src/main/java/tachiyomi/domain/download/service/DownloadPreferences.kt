@@ -31,6 +31,8 @@ class DownloadPreferences(
 
     val reencodeGrayscale: Preference<Boolean> = preferenceStore.getBoolean("reencode_grayscale", false)
 
+    val reencodeCropMargins: Preference<Boolean> = preferenceStore.getBoolean("reencode_crop_margins", false)
+
     val autoDownloadWhileReading: Preference<Int> = preferenceStore.getInt("auto_download_while_reading", 0)
 
     val removeAfterReadSlots: Preference<Int> = preferenceStore.getInt("remove_after_read_slots", -1)

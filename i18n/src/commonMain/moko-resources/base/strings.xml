@@ -588,6 +588,8 @@
     <string name="pref_download_reencode_profile">Target device</string>
     <string name="pref_download_reencode_grayscale">Grayscale pages</string>
     <string name="pref_download_reencode_grayscale_summary">Always on for the Boox Page profile.</string>
+    <string name="pref_download_reencode_crop">Crop white margins</string>
+    <string name="pref_download_reencode_crop_summary">Trims blank borders, up to 15% per side. Pages can end up with slightly different sizes.</string>
     <string name="device_profile_musnap_ocean_c">Musnap Ocean C (1264×1680)</string>
     <string name="device_profile_boox_page">Boox Page (1264×1680)</string>
     <string name="pref_download_concurrent_sources">Concurrent source downloads</string>
